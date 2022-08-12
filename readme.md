@@ -1,4 +1,13 @@
+
+
 # barebone express server with node-fetch.
+use nvm,npm,pnpm! 
+
+```bash
+pnpm i && pnpm run start
+```
+
+
 dependencies:
 + cors 2.8.5
 + express 4.18.1
