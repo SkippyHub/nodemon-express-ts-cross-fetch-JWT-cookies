@@ -13,13 +13,17 @@ pnpm manages packages from npm.
  curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.1/install.sh | bash
  ```
  https://github.com/pnpm/pnpm
+ 
   ```bash
  npm install -g pnpm
  ```
 create a .env file (copy .env.example) 
- add  USERNAME=<YOUR DOCKER USERNAME> and  PASSWORD=<YOUR DOCKER PASSWORD>
+```bash
+USERNAME=<YOUR DOCKER USERNAME>
+PASSWORD=<YOUR DOCKER PASSWORD>
+```
 
-run:
+then run:
 ```bash
 pnpm i && pnpm run start
 ```
