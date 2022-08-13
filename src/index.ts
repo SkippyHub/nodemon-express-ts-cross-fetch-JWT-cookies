@@ -45,6 +45,7 @@ app.get('/', async (req, res) => {
 // lamda async fetch response
 const loginLamda = async (username: string, password: string) => {
 
+    //first fetch to get the token from login
     let url = 'https://hub.docker.com//v2/users/login';
 
     let options = {
@@ -58,16 +59,14 @@ const loginLamda = async (username: string, password: string) => {
     };
     // docker async fetch response
     const docker = await fetch(url, options)
-        .then(res => res)
-
-
-    const body = await docker.json()
+    const dockerbody = await docker.json()
+    const dockerheader=docker.headers
 
     // this is not the normal way to do this as this is a hack due to dockerhub api being broken.
-    const cookies = cookie.parse(docker.headers.get('set-cookie') ?? "".split(',')[0]);
+    const cookies = cookie.parse(dockerheader.get('set-cookie') ?? "".split(',')[0]);
 
 
-    let token = body.token;
+    let token = dockerbody.token;
     console.log("token: ", token);
     let csrftoken = cookieParser.JSONCookies(cookies).csrftoken;
     console.log("csrftoken: ", csrftoken);
@@ -80,6 +79,8 @@ const loginLamda = async (username: string, password: string) => {
     // console.log(datajson);
 
     let namespaces = decoded?.username ?? "";
+
+    // second fetch to get the repos
     let repourl = `https://hub.docker.com//v2/namespaces/${namespaces}/repositories/`;
 
     let repooptions = {
@@ -91,8 +92,8 @@ const loginLamda = async (username: string, password: string) => {
     };
     const dockerrepo = await fetch(repourl, repooptions)
     console.log("dockerrepo: ", dockerrepo);
-    const repobody = await dockerrepo.json()
-    console.log("repobody: ", repobody);
+    const dockerrepobody = await dockerrepo.json()
+    console.log("dockerrepobody: ", dockerrepobody);
 }
 // console log loginLamda();
 loginLamda(`${USERNAME}`, `${PASSWORD}`);
