@@ -1,6 +1,6 @@
 
 
-# Barebones nodemon express server with cross-fetch and cookies.
+# Barebones nodemon express ts server  with cross-fetch and cookies.
 This has a dockerhub v2 api fetch as an example to get you started.
 
 use nvm,npm (latest, *16*), pnpm! 
