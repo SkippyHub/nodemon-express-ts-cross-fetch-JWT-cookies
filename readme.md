@@ -1,12 +1,11 @@
 
 
-# barebone express server with cross-fetch.
+# Barebone express server with cross-fetch and cookies.
 
 use nvm,npm (latest, *16*),pnpm! 
  
 nvm manages node versions,
 pnpm manages packages from npm. 
-
 
 
 ```bash
