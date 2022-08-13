@@ -7,6 +7,8 @@ use nvm,npm (latest, *16*), pnpm!
 nvm manages node versions,
 pnpm manages packages from npm. 
 
+create a .env file and add  USERNAME=<YOUR DOCKER USERNAME> and  PASSWORD=<YOUR DOCKER PASSWORD>
+
 
 ```bash
 pnpm i && pnpm run start
