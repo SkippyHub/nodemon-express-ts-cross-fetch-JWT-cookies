@@ -13,10 +13,11 @@ import cookieParser from 'cookie-parser';
 // import jasonwebtoken
 import jwt from 'jsonwebtoken';
 
-
+//dot env variables
 import dotenv from 'dotenv';
 import { json } from 'stream/consumers';
 dotenv.config();
+
 const USERNAME = process.env.USERNAME
 const PASSWORD = process.env.PASSWORD
 
