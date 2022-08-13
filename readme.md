@@ -1,13 +1,21 @@
 
 
-# Barebone nodemon express server with cross-fetch and cookies.
+# Barebones nodemon express server with cross-fetch and cookies.
 This has a dockerhub v2 api fetch as an example to get you started.
 
 use nvm,npm (latest, *16*), pnpm! 
  
 nvm manages node versions,
-pnpm manages packages from npm. 
+pnpm manages packages from npm.
 
+ https://github.com/nvm-sh/nvm
+ ```bash
+ curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.1/install.sh | bash
+ ```
+ https://github.com/pnpm/pnpm
+  ```bash
+ npm install -g pnpm
+ ```
 create a .env file (copy .env.example) 
  add  USERNAME=<YOUR DOCKER USERNAME> and  PASSWORD=<YOUR DOCKER PASSWORD>
 
