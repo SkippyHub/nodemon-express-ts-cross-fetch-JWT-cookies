@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset='utf-8'>
+    <meta http-equiv='X-UA-Compatible' content='IE=edge'>
+    <title>Page Title</title>
+    <meta name='viewport' content='width=device-width, initial-scale=1'>
+    <link rel='stylesheet' type='text/css' media='screen' href='main.css'>
+    <script src='index.js'></script>
+
+    <script>
+
+            const handleSubmit = async (e) =>{
+            e.preventDefault();
+            console.log('btn clicked');
+            var subdomain = document.getElementsByName("subdomain")[0].value;
+
+            console.log(subdomain);
+            // prevent the default action of the form
+            // console.log(e.subdomains)
+            // // get the value of the input field
+            // // var submitUrl = document.getElementById('submitUrl').value;
+            // // check if the input field is empty
+            await fetch("submit", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    "subdomain": subdomain
+                })
+            })
+            updateSubdomains();
+        }
+
+         async function updateSubdomains() {
+            tempdomains = await fetch('http://localhost:3000/domains',{
+                method: "GET",
+                headers:{
+                        "Content-Type": "application/json"
+
+                }
+            }).then(res => res.json())
+
+            console.log(tempdomains);
+
+            constring = tempdomains.localhost.subdomains.map(x=>`<li><a href=http://${x}.localhost:3000>http://${x}.localhost:3000</a></li>`).join('')
+            console.log(constring);
+
+            var subdomains = document.getElementById("subdomainslist");
+            subdomains.innerHTML = `${constring}`;
+        }
+        // on window load, update subdomains element list
+        window.onload = updateSubdomains;
+
+
+    </script>
+</head>
+
+<body>
+    hello world from localhost
+    please add sub domains here in the input
+
+    div that lists the sub domains
+    <div id='subdomains'>
+        list of subdomains:
+        <ul id='subdomainslist'>
+        </ul>
+    </div>
+ <!-- form that has prevent defualt -->
+
+    <form class="form" action="#" onsubmit="handleSubmit(event);return false" id="form">
+        subdomains <input type="text" class="subdomain" name="subdomain"></input>
+        <button type="submit">submit</button>
+    </form>
+</body>
+
+</html>

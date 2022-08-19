@@ -1,0 +1,6 @@
+{
+    "server": {
+        "domain": "localhost",
+        "Port": 3000
+    }
+}
