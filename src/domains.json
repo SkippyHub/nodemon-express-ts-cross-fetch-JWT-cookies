@@ -1,9 +1,11 @@
 {
         "localhost": {
-            "subdomains": [
+            "description": "Localhost, ",
+            "subdomains": 
+            [
                 "abc",
                 "xyz"
             ],
             "port": 3000
         }
-}
+} 
