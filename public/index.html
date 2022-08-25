@@ -25,7 +25,13 @@
             await fetch("submit", {
                 method: "POST",
                 headers: {
-                    "Content-Type": "application/json"
+                    'Authorization': 'Bearer ' + "this.state.clientToken",
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
+                    "Access-Control-Allow-Origin": "*",
+                    "Access-Control-Allow-Credentials": true,
+
+
                 },
                 body: JSON.stringify({
                     "subdomain": subdomain
