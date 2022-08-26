@@ -3,8 +3,8 @@
 
 generator client {
   provider = "prisma-client-js"
+  output = "../node_modules/.prisma/client"
 }
-
 datasource db {
   provider = "sqlite"
   url      = env("DATABASE_URL")
@@ -16,11 +16,11 @@ model User {
   firstName            String?
   lastName             String?
   email                String?        @unique
-  email_confirmed_date DateTime
+  email_confirmed_date DateTime?
   password             String?
-  phone                String
-  phone_confirmed_date DateTime
-  last_login_date      DateTime
+  phone                String?
+  phone_confirmed_date DateTime?
+  last_login_date      DateTime?
   user_metadata        UserMetaData[]
   // role                 Role //migrate on production
   role                 String?
