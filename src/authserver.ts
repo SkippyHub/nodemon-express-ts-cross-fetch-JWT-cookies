@@ -22,7 +22,7 @@ var csrfProtection = csrf({ cookie: true })
 app.use(cors(
     {
         // origin: "http://localhost:5173",
-        origin: /localhost/,
+        origin: /localhost/, //wildcard regex for any.localhost:any
         // origin: "*",
         credentials: true,
 
@@ -48,6 +48,7 @@ console.log(`secret: ${SECRET_JWT_KEY}`);
 
 // User database.
 let refreshTokens: any[] = [];
+let user: any[] = [];
 
 // set a cookie
 // app.use(function (req, res, next) {
@@ -72,7 +73,7 @@ let refreshTokens: any[] = [];
 app.get('/',csrfProtection, (req: Request, res: Response) => {
     res.cookie('CSRF-TOKEN', req.csrfToken());
     res.header('x-csrf-token', req.csrfToken());
-    res.send('Hello World!');
+    res.send('Express auth server with CRSF protection and JWT tokens');
 });
 
 
@@ -105,6 +106,7 @@ app.post('/login', csrfProtection,(req: Request, res: Response) => {
 
     console.info(req.body.username + ' is trying to login');
     const username = req.body.username as string;
+
     const password = bcrypt.hashSync(req.body.password, 8)
     // verify(req.body.credential);
 
@@ -135,17 +137,18 @@ app.post('/login', csrfProtection,(req: Request, res: Response) => {
 
 
 // JWT register endpoint (POST /register) which provides two tokens:
-app.post('/register', (req: Request, res: Response) => {
+app.post('/signup', (req: Request, res: Response) => {
 console.log(req.body);
-console.info(req.body.username + ' is trying to register');
+console.info(req.body.username + ' is trying to signup');
     const username = req.body.username as string;
-    const password = req.body.password as string; // should be bcrypt'd
+    const password = bcrypt.hashSync(req.body.password, 10)
 
     const user = {
         username: username,
         password: password
     }
 
+    
     try {
         // const token = jwt.sign(user, SECRET_JWT_KEY, { expiresIn: '1h' });
         const accessToken = generateToken(user, SECRET_JWT_KEY, '1h');
