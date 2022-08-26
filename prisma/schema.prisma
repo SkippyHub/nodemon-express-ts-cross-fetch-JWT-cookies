@@ -9,3 +9,62 @@ datasource db {
   provider = "sqlite"
   url      = env("DATABASE_URL")
 }
+
+// add enum role to user
+model User {
+  id                   String         @id @default(cuid())
+  firstName            String?
+  lastName             String?
+  email                String?        @unique
+  email_confirmed_date DateTime
+  password             String?
+  phone                String
+  phone_confirmed_date DateTime
+  last_login_date      DateTime
+  user_metadata        UserMetaData[]
+  // role                 Role //migrate on production
+  role                 String?
+}
+
+// enum Role {
+//   ADMIN
+//   USER
+//   GUEST
+// }
+
+
+
+model UserMetaData {
+  id                 String   @id @default(cuid())
+  meta_data_order    Int      @default(0)
+  avatar_url         String
+  email              String
+  email_verified     Boolean?
+  full_name          String
+  iss                String
+  name               String
+  picture            String?
+  // provider_id        Oauthproviders  //migrate on production
+  provider_id        String?
+  sub                String
+  preferred_username String?
+  username           String?
+  userId             String      @unique
+  user               User     @relation(fields: [userId], references: [id])
+}
+
+// enum Oauthproviders {
+//   CUSTOM
+//   GOOGLE
+//   GITHUB
+//   MICROSOFT
+//   EMAIL
+//   PHONE
+//   SMS
+//   OAUTH
+//   OIDC
+//   TWITTER
+//   // FACEBOOK
+//   // LINKEDIN
+//   // YAHOO
+// }
