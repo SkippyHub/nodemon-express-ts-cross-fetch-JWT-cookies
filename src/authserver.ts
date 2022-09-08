@@ -3,9 +3,14 @@ import dotenv from 'dotenv';
 import jwt from 'jsonwebtoken';
 import cookies from 'cookie'
 import cookieParser from "cookie-parser";
-import cors from 'cors';
-import csrf from 'csurf';
-import bcrypt from 'bcrypt';
+import cors from 'cors'; // for cross-domain requests
+import csrf from 'csurf'; // CSRF protection
+// import bcrypt from 'bcrypt';
+// import { PrismaClient } from '@prisma/client'
+import { PrismaClient } from '../node_modules/.prisma/client' // related bug  https://github.com/prisma/prisma/issues/13672#issuecomment-1152581890
+
+const prisma = new PrismaClient()
+
 
 dotenv.config();
 
@@ -39,11 +44,11 @@ app.use(cors(
 //   })
 
 
-const port = 3000
+const port = 3001
 
 // constants
-const SECRET_JWT_KEY = process.env.SECRET_JWT_KEY??"secret" as string;
-const SECRET_JWT__REFRESH_KEY = process.env.SECRET_JWT__REFRESH_KEY ??"secret" as string;
+const SECRET_JWT_KEY = process.env.SECRET_JWT_KEY ?? "secret" as string;
+const SECRET_JWT__REFRESH_KEY = process.env.SECRET_JWT__REFRESH_KEY ?? "secret" as string;
 console.log(`secret: ${SECRET_JWT_KEY}`);
 
 // User database.
@@ -70,7 +75,7 @@ let user: any[] = [];
 
 
 
-app.get('/',csrfProtection, (req: Request, res: Response) => {
+app.get('/', csrfProtection, (req: Request, res: Response) => {
     res.cookie('CSRF-TOKEN', req.csrfToken());
     res.header('x-csrf-token', req.csrfToken());
     res.send('Express auth server with CRSF protection and JWT tokens');
@@ -83,7 +88,7 @@ app.get('/',csrfProtection, (req: Request, res: Response) => {
 //     // console.log(req.cookies)
 
 //     console.log(req.headers)
-    
+
 //     res.cookie('sfoaofjao', 'value', { maxAge: 900000, httpOnly: true });
 //     res.json({ message: 'Hello World!' });
 //     res.status(200)
@@ -98,7 +103,7 @@ app.get('/',csrfProtection, (req: Request, res: Response) => {
 
 
 // JWT login endpoint (POST /login) which provides two tokens:
-app.post('/login', csrfProtection,(req: Request, res: Response) => {
+app.post('/login', csrfProtection, (req: Request, res: Response) => {
     // console.log("req");
     // console.log(req);
     // // console.log("req.body.credential");
@@ -107,7 +112,8 @@ app.post('/login', csrfProtection,(req: Request, res: Response) => {
     console.info(req.body.username + ' is trying to login');
     const username = req.body.username as string;
 
-    const password = bcrypt.hashSync(req.body.password, 8)
+    // const password = bcrypt.hashSync(req.body.password, 8)
+    const password = req.body.password as string;
     // verify(req.body.credential);
 
     const user = {
@@ -138,17 +144,35 @@ app.post('/login', csrfProtection,(req: Request, res: Response) => {
 
 // JWT register endpoint (POST /register) which provides two tokens:
 app.post('/signup', (req: Request, res: Response) => {
-console.log(req.body);
-console.info(req.body.username + ' is trying to signup');
+    console.log(req.body);
+    console.info(req.body.username + ' is trying to signup');
     const username = req.body.username as string;
-    const password = bcrypt.hashSync(req.body.password, 10)
+    const password = bcrypt.hashSync(req.body.password, 10) as string
 
-    const user = {
-        username: username,
-        password: password
+
+    async (username: string, password: string) => {
+        // ... you will write your Prisma Client queries here
+        const userPrisma = await prisma.user.create({
+            data: {
+                email: username,
+                password: password,
+                email_confirmed_date: "null",
+                phone: "null",
+                phone_confirmed_date: "null",
+                last_login_date: "null"
+            },
+        }).then(async () => {
+            await prisma.$disconnect()
+        })
+            .catch(async (e) => {
+                console.error(e)
+                await prisma.$disconnect()
+                process.exit(1)
+            })
     }
 
-    
+
+
     try {
         // const token = jwt.sign(user, SECRET_JWT_KEY, { expiresIn: '1h' });
         const accessToken = generateToken(user, SECRET_JWT_KEY, '1h');
@@ -159,11 +183,11 @@ console.info(req.body.username + ' is trying to signup');
             accessToken: accessToken,
             refreshToken: refreshToken,
         });
-    }    
-    catch(err) {
+    }
+    catch (err) {
         res.status(500).send(err);
     }
-});    
+});
 
 // token refresh endpoint (POST /refresh) which provides a new token
 // which expires in 7 days
@@ -228,5 +252,5 @@ function authenicateToken(req: Request, res: Response, next: Function) {
 
 
 app.listen(port, () => {
-      console.log(`⚡️[server]: Server is running at http://localhost:${port}`);
+    console.log(`⚡️[server]: Server is running at http://localhost:${port}`);
 });
