@@ -13,6 +13,7 @@ datasource db {
 // add enum role to user
 model User {
   id                   String         @id @default(cuid())
+  username             String?        @unique
   firstName            String?
   lastName             String?
   email                String?        @unique
@@ -20,6 +21,7 @@ model User {
   password             String?
   phone                String?
   phone_confirmed_date DateTime?
+  created_date         DateTime?
   last_login_date      DateTime?
   user_metadata        UserMetaData[]
   // role                 Role //migrate on production
