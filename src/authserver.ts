@@ -6,7 +6,7 @@ import cookieParser from "cookie-parser";
 import cors from 'cors'; // for cross-domain requests
 import csrf from 'csurf'; // CSRF protection
 // import bcrypt from 'bcrypt';
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 // import { PrismaClient } from '@prisma/client'
 import { PrismaClient } from '../node_modules/.prisma/client' // related bug  https://github.com/prisma/prisma/issues/13672#issuecomment-1152581890
 
@@ -32,9 +32,26 @@ app.use(cors(
         // origin: "*",
         credentials: true,
 
-    }
-))
+    // }
+// ))
 
+// https://httptoolkit.tech/blog/cache-your-cors/
+// app.use(cors({
+    // Set the browser cache time for preflight responses
+    maxAge: 86400,
+    preflightContinue: true // Allow us to manually add to preflights
+}));
+
+// Add cache-control to preflight responses in a separate middleware:
+app.use((req, res, next) => {
+    if (req.method === 'OPTIONS') {
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+        // No Vary required: cors sets it already set automatically
+        res.end();
+    } else {
+        next();
+    }
+});
 
 // Use this as an example for creating a specific cors policy?
 // app.use((req, res, next) => {
@@ -53,8 +70,8 @@ const SECRET_JWT__REFRESH_KEY = process.env.SECRET_JWT__REFRESH_KEY ?? "secret" 
 console.log(`secret: ${SECRET_JWT_KEY}`);
 
 // User database.
-let refreshTokens: any[] = [];
-let user: any[] = [];
+// let refreshTokens: any[] = [];
+// let user: any[] = [];
 
 // set a cookie
 // app.use(function (req, res, next) {
@@ -76,7 +93,7 @@ let user: any[] = [];
 
 
 
-app.get('/', csrfProtection, (req: Request, res: Response) => {
+app.get('/', csrfProtection, authenicateToken, (req: Request, res: Response) => {
     res.cookie('CSRF-TOKEN', req.csrfToken());
     res.header('x-csrf-token', req.csrfToken());
     res.send('Express auth server with CRSF protection and JWT tokens');
@@ -136,32 +153,43 @@ async function createUserPrisma(username: string, password: string) {
 // JWT login endpoint (POST /login) which provides two tokens:
 app.post('/login', csrfProtection, async (req: Request, res: Response) => {
     console.info(req.body.username + ' is trying to login');
-    const username = req.body.username as string;
 
-    // const password = bcrypt.hashSync(req.body.password, 8)
-    // during login no need to encrypt password.
-    const password = req.body.password as string;
+    // Verify CSRF credential
     // verify(req.body.credential);
 
     const user = {
-        username: username,
-        password: password
+        username: req.body.username as string,
+        password: req.body.password as string,
     }
 
     // this should be a stand alone function
 
-    var userPrisma = await getUserPrisma(username);
+    var userPrisma = await getUserPrisma(user.username);
 
     console.log(userPrisma);
     if (userPrisma) {
-        const valid = await bcrypt.compare(password, userPrisma.password);
+        const valid = await bcrypt.compare(user.password, userPrisma.password);
         if (valid) {
             try {
                 // const token = jwt.sign(user, SECRET_JWT_KEY, { expiresIn: '1h' });
                 const accessToken = generateToken({ username: user.username }, SECRET_JWT_KEY, '1h');
                 // const refreshToken = jwt.sign(user, SECRET_JWT__REFRESH_KEY, { expiresIn: '7d' });
                 const refreshToken = generateToken({ username: user.username }, SECRET_JWT__REFRESH_KEY, '7d');
-                refreshTokens.push(refreshToken);
+
+                //add refresh token to prisma database
+                const refreshTokenPrisma = await prisma.refreshTokens.create({
+                    data: {
+                        token: refreshToken,
+                        user: {
+                            connect: {
+                                username: user.username
+                            }
+                        }
+                    }
+                })
+                console.log(refreshTokenPrisma);
+
+                // refreshTokens.push(refreshToken);
                 res.cookie('accessToken', accessToken, { maxAge: 900000, httpOnly: true });
                 res.json({
                     accessToken: accessToken,
@@ -185,13 +213,14 @@ app.post('/login', csrfProtection, async (req: Request, res: Response) => {
 
 
 // JWT register endpoint (POST /register) which provides two tokens:
-app.post('/signup', (req: Request, res: Response) => {
+app.post('/signup', async (req: Request, res: Response) => {
     console.log(req.body);
     console.info(req.body.username + ' is trying to signup');
     // const username = req.body.username as string;
     // const password = bcrypt.hashSync(req.body.password, 10) as string
 
-    
+    // Verify CSRF credential
+    // verify(req.body.credential);
     const user = {
         username: req.body.username as string,
         password: bcrypt.hashSync(req.body.password, 10) as string
@@ -205,9 +234,24 @@ app.post('/signup', (req: Request, res: Response) => {
     try {
         // const token = jwt.sign(user, SECRET_JWT_KEY, { expiresIn: '1h' });
         const accessToken = generateToken({ username: user.username }, SECRET_JWT_KEY, '1h');
+        
         // const refreshToken = jwt.sign(user, SECRET_JWT__REFRESH_KEY, { expiresIn: '7d' });
         const refreshToken = generateToken({ username: user.username }, SECRET_JWT__REFRESH_KEY, '7d');
-        refreshTokens.push(refreshToken);
+
+        //add refresh token to prisma database
+        const refreshTokenPrisma = await prisma.refreshTokens.create({
+            data: {
+                token: refreshToken,
+                user: {
+                    connect: {
+                        username: user.username
+                    }
+                }
+            }
+        })
+
+        console.log(refreshTokenPrisma);
+        // refreshTokens.push(refreshToken);
         res.json({
             accessToken: accessToken,
             refreshToken: refreshToken,
@@ -218,39 +262,131 @@ app.post('/signup', (req: Request, res: Response) => {
     }
 });
 
+//logout app post that deletes the refresh token from the database.
+app.post('/logout', async (req: Request, res: Response) => {
+    console.log(req.body);
+    console.info(req.body.username + ' is trying to logout');
+    res.cookie('CSRF-TOKEN', '', { maxAge: 0, httpOnly: true });
+    res.header('x-csrf-token', '');
+
+    res.cookie('accessToken', '', { maxAge: 0, httpOnly: true });
+    res.cookie('refreshToken', '', { maxAge: 0, httpOnly: true });
+
+
+
+    const user = {
+        username: req.body.username as string,
+        refreshToken: req.body.refreshToken as string
+    }
+
+    //delete refresh token from prisma database
+    // swap to find one and update expires date to now or something effecient.
+    // const refreshTokenPrisma = await prisma.refreshTokens.delete({
+    //     where: {
+    //         token: user.refreshToken
+    //     }
+    // })
+
+    // console.log(refreshTokenPrisma);
+    res.status(200).send('Logged out');
+});
+
 // token refresh endpoint (POST /refresh) which provides a new token
 // which expires in 7 days
-app.post('/refreshtoken', authenicateToken, (req: Request, res: Response) => {
-    console.info(req.body.user.username + ' is trying to refresh token');
+
+// swap to a find one, IF EXPIRE field is not valid ( exipre > now) to now then return error
+app.post('/refreshtoken', authenicateToken, async (req: Request, res: Response) => {
+
+    const user = {
+        username: req.body.username as string,
+        // password: req.body.password as string,
+    }
+
+    console.info(req.body.username + ' is trying to refresh token');
     console.info(req.body);
     const refreshToken = req.body.refreshToken as string;
+    
 
-    if (req.body.refreshToken === null) {
+
+    if (refreshToken === null) {
         return res.sendStatus(401);
     }
-    const user = req.body.user;
-    if (refreshTokens.indexOf(refreshToken) === -1) {
+    // const user = req.body.user;
+
+
+    // verify refresh token is valid from prisma database.
+    const refreshTokenPrisma = await prisma.refreshTokens.findFirst({
+        where: {
+            token: refreshToken,
+        }
+    })
+    console.log('Refresh token found:',  refreshTokenPrisma);
+
+    if( refreshTokenPrisma === null) {
         return res.sendStatus(403);
     }
 
-    if (refreshToken.includes(req.body.refreshToken)) {
-        const user = {
-            username: req.body.user.username,
-        }
+
+    // if prisma refresh token is valid, then generate new token
         try {
-            // const token = jwt.sign(user, SECRET_JWT__REFRESH_KEY, { expiresIn: '7d' });
-            // const token = generateToken(user, SECRET_JWT__REFRESH_KEY, '7d');
+
+            console.log('creating new token');
+            // const token = jwt.sign(user, SECRET_JWT_KEY, { expiresIn: '1h' });
             const accessToken = generateToken({ username: user.username }, SECRET_JWT_KEY, '1h');
+            console.log('new token created');
+            console.log('accessToken:', accessToken);
+            
+            // const refreshToken = jwt.sign(user, SECRET_JWT__REFRESH_KEY, { expiresIn: '7d' });
+            const refreshToken = generateToken({ username: user.username }, SECRET_JWT__REFRESH_KEY, '7d');
+            console.log('refreshToken:', refreshToken);
+    
+            //add refresh token to prisma database
+            const refreshTokenPrisma = await prisma.refreshTokens.create({
+                data: {
+                    token: refreshToken,
+                    user: {
+                        connect: {
+                            username: user.username
+                        }
+                    }
+                }
+            })
+    
+            console.log('refresh token added: ', refreshTokenPrisma);
+            // refreshTokens.push(refreshToken);
             res.json({
-                accesstoken: accessToken,
+                'message': 'token refreshed',
+                accessToken: accessToken,
+                refreshToken: refreshToken,
             });
         }
         catch (err) {
             res.status(500).send(err);
         }
-    }
-}
-);
+});
+
+//     if (refreshTokens.indexOf(refreshToken) === -1) {
+//         return res.sendStatus(403);
+//     }
+
+//     if (refreshToken.includes(req.body.refreshToken)) {
+//         const user = {
+//             username: req.body.user.username,
+//         }
+//         try {
+//             // const token = jwt.sign(user, SECRET_JWT__REFRESH_KEY, { expiresIn: '7d' });
+//             // const token = generateToken(user, SECRET_JWT__REFRESH_KEY, '7d');
+//             const accessToken = generateToken({ username: user.username }, SECRET_JWT_KEY, '1h');
+//             res.json({
+//                 accesstoken: accessToken,
+//             });
+//         }
+//         catch (err) {
+//             res.status(500).send(err);
+//         }
+//     }
+// }
+// );
 
 
 
@@ -261,7 +397,7 @@ function generateToken(user: any, secret: string, expiresIn: string) {
 
 function authenicateToken(req: Request, res: Response, next: Function) {
     const authHeader = req.headers['authorization'];
-    // console.info(req.body);
+    console.info(req.body);
 
     // console.info(authHeader);
     const token = authHeader && authHeader.split(' ')[1];
