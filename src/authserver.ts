@@ -3,11 +3,34 @@ import dotenv from 'dotenv';
 import jwt from 'jsonwebtoken';
 import cookies from 'cookie'
 import cookieParser from "cookie-parser";
+import { doubleCsrf } from "csrf-csrf";
+// import csrf from 'csurf'; //deprecated
 import cors from 'cors';
-import csrf from 'csurf';
 import bcrypt from 'bcrypt';
 
 dotenv.config();
+
+// const {
+//     invalidCsrfTokenError, // This is just for convenience if you plan on making your own middleware.
+//     generateToken, // Use this in your routes to provide a CSRF hash cookie and token.
+//     validateRequest, // Also a convenience if you plan on making your own middleware.
+//     doubleCsrfProtection, // This is the default CSRF protection middleware.
+//   } = doubleCsrf(doubleCsrfOptions);
+var Hostpsifi = "Host-psifi";
+const doubleCsrfUtilities = doubleCsrf({
+    getSecret: () => "Secret", // A function that optionally takes the request and returns a secret
+    cookieName: `__${Hostpsifi}.x-csrf-token`, // The name of the cookie to be used, recommend using Host prefix.
+    cookieOptions: {
+      httpOnly : true,
+      sameSite : "lax",  // Recommend you make this strict if possible
+      path : "/",
+      secure : true,
+    //   ...remainingCOokieOptions // Additional options supported: domain, maxAge, expires
+    },
+    size: 64, // The size of the generated tokens in bits
+    ignoredMethods: ["GET", "HEAD", "OPTIONS"], // A list of request methods that will not be protected.
+    getTokenFromRequest: (req) => req.headers["x-csrf-token"], // A function that returns the token from the request
+  });
 
 const app: Express = express();
 
@@ -15,7 +38,7 @@ app.use(cookieParser());
 
 app.use(express.json());
 
-var csrfProtection = csrf({ cookie: true })
+// var csrfProtection = csrf({ cookie: true }) //deprecated
 // learn more at https://github.com/expressjs/csurf
 
 
@@ -68,10 +91,15 @@ let refreshTokens: any[] = [];
 // });
 
 
+// remake this with CSRF-CSRF
 
-app.get('/',csrfProtection, (req: Request, res: Response) => {
-    res.cookie('CSRF-TOKEN', req.csrfToken());
-    res.header('x-csrf-token', req.csrfToken());
+//  //deprecated
+app.get('/',
+// csrfProtection,
+ (req: Request, res: Response) => {
+    
+    // res.cookie('CSRF-TOKEN', req.csrfToken());
+    // res.header('x-csrf-token', req.csrfToken());
     res.send('Hello World!');
 });
 
@@ -97,7 +125,9 @@ app.get('/',csrfProtection, (req: Request, res: Response) => {
 
 
 // JWT login endpoint (POST /login) which provides two tokens:
-app.post('/login', csrfProtection,(req: Request, res: Response) => {
+app.post('/login',
+// csrfProtection, //deprecated
+ (req: Request, res: Response) => {
     // console.log("req");
     // console.log(req);
     // // console.log("req.body.credential");
